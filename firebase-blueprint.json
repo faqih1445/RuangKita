@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "Place": {
+      "title": "Place",
+      "description": "Tempat wisata atau fasilitas publik setempat di Cirebon",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID unik tempat"
+        },
+        "name": {
+          "type": "string",
+          "description": "Nama tempat wisata/publik"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Wisata", "Fasilitas Publik", "Keamanan"],
+          "description": "Kategori lokasi"
+        },
+        "distance": {
+          "type": "string",
+          "description": "Jarak perkiraan atau dinamis"
+        },
+        "image": {
+          "type": "string",
+          "description": "URL gambar tempat"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Skor rating dari pengguna"
+        },
+        "description": {
+          "type": "string",
+          "description": "Deskripsi terperinci"
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Koordinat lintang (GPS)"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Koordinat bujur (GPS)"
+        }
+      },
+      "required": ["id", "name", "category", "image", "rating"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Laporan pengaduan warga terkait masalah fasilitas umum",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID unik laporan"
+        },
+        "title": {
+          "type": "string",
+          "description": "Judul laporan pengaduan"
+        },
+        "category": {
+          "type": "string",
+          "description": "Kategori masalah (misal: Jalan Rusak, Lampu Padam)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Deskripsi tanggal waktu laporan"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Resolved", "Sedang Ditangani", "Menunggu"],
+          "description": "Status tindak lanjut laporan"
+        },
+        "description": {
+          "type": "string",
+          "description": "Deskripsi rinci pengaduan"
+        },
+        "image": {
+          "type": "string",
+          "description": "URL gambar pendukung laporan"
+        },
+        "authorList": {
+          "type": "array",
+          "description": "Daftar avatar kontributor laporan"
+        },
+        "votes": {
+          "type": "number",
+          "description": "Jumlah dukungan suara warga"
+        },
+        "comments": {
+          "type": "number",
+          "description": "Jumlah komentar"
+        },
+        "location": {
+          "type": "string",
+          "description": "Lokasi spesifik kejadian"
+        },
+        "officerNotes": {
+          "type": "string",
+          "description": "Catatan dari petugas pemerintah"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Rating hasil penyelesaian"
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID pengguna pembuat laporan"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Waktu server pembuatan laporan"
+        }
+      },
+      "required": ["id", "title", "category", "status", "description", "image", "location"]
+    }
+  },
+  "firestore": {
+    "/places/{placeId}": {
+      "schema": "Place",
+      "description": "Koleksi wisata terintegrasi di Cirebon"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Aspirasi pengaduan publik dari warga"
+    }
+  }
+}

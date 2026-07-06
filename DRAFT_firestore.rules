@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Phase 4: Validation Blueprints (The "Anti-Update-Gap")
+    function isValidPlace(data) {
+      return data.keys().hasAll(['id', 'name', 'category', 'image', 'rating']) &&
+             data.keys().size() >= 5 && data.keys().size() <= 9 &&
+             data.id is string && data.id.size() <= 64 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.category is string && (data.category == 'Wisata' || data.category == 'Fasilitas Publik' || data.category == 'Keamanan') &&
+             data.image is string && data.image.size() <= 2048 &&
+             data.rating is number && data.rating >= 0 && data.rating <= 5 &&
+             (!data.keys().hasAny(['description']) || (data.description is string && data.description.size() <= 5000)) &&
+             (!data.keys().hasAny(['distance']) || (data.distance is string && data.distance.size() <= 32)) &&
+             (!data.keys().hasAny(['latitude']) || data.latitude is number) &&
+             (!data.keys().hasAny(['longitude']) || data.longitude is number);
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'status', 'description', 'image', 'location']) &&
+             data.keys().size() >= 7 && data.keys().size() <= 15 &&
+             data.id is string && data.id.size() <= 64 &&
+             data.title is string && data.title.size() <= 256 &&
+             data.category is string && data.category.size() <= 128 &&
+             data.status is string && (data.status == 'Pending' || data.status == 'Resolved' || data.status == 'Sedang Ditangani' || data.status == 'Menunggu') &&
+             data.description is string && data.description.size() <= 5000 &&
+             data.image is string && data.image.size() <= 2048 &&
+             data.location is string && data.location.size() <= 256 &&
+             (!data.keys().hasAny(['votes']) || data.votes is number) &&
+             (!data.keys().hasAny(['comments']) || data.comments is number) &&
+             (!data.keys().hasAny(['officerNotes']) || (data.officerNotes is string && data.officerNotes.size() <= 5000)) &&
+             (!data.keys().hasAny(['rating']) || (data.rating is number && data.rating >= 0 && data.rating <= 5)) &&
+             (!data.keys().hasAny(['authorId']) || (data.authorId is string && data.authorId.size() <= 128)) &&
+             (!data.keys().hasAny(['createdAt']) || data.createdAt is timestamp);
+    }
+
+    // Match rules for Places
+    match /places/{placeId} {
+      allow get, list: if true; // Publicly accessible to read
+      allow create, update: if isSignedIn() && isValidId(placeId) && isValidPlace(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(placeId);
+    }
+
+    // Match rules for Reports
+    match /reports/{reportId} {
+      allow get, list: if true; // Citizens and government can see reports
+      
+      allow create: if isSignedIn() && 
+                    isValidId(reportId) && 
+                    isValidReport(request.resource.data) &&
+                    (request.resource.data.authorId == request.auth.uid) &&
+                    (!request.resource.data.keys().hasAny(['createdAt']) || request.resource.data.createdAt == request.time);
+                    
+      allow update: if isSignedIn() && 
+                    isValidId(reportId) && 
+                    isValidReport(request.resource.data) && (
+                      // Action: Cast a vote / support report
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes', 'authorList'])) ||
+                      // Action: Government officer update status / notes
+                      (request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'officerNotes', 'rating']))
+                    );
+
+      allow delete: if isSignedIn() && isValidId(reportId) && (resource.data.authorId == request.auth.uid);
+    }
+  }
+}
